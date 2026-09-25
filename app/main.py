@@ -249,8 +249,9 @@ def _parse_cli_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="向多个抖音好友发送配置的消息")
     parser.add_argument("--dry-run", action="store_true", help="只验证登录和好友，不发送消息")
     parser.add_argument("--env-file", help="指定 .env 文件路径")
-    return parser.parse_args()
-
+    parser.add_argument("--auth-file", help="指定 auth.json 凭证文件路径")
+    args, _ = parser.parse_known_args()
+    return args
 
 def _configure_logging(
     artifacts_dir: Path,

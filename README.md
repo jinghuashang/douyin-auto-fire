@@ -81,6 +81,29 @@ docker compose up -d
 
 通知功能完全可选，不配置不影响消息发送。
 
+
+## 🔐 系统登录鉴权与安全
+
+本项目具备防破解身份鉴权系统，用于在任务执行前保护运行凭证与操作权限：
+
+- **首次启动初始化**：首次启动时自动引导配置用户名与密码（用户名 3-32 位，密码至少 8 位且包含字母与数字），凭证采用 **PBKDF2-HMAC-SHA256 (600,000 次哈希迭代 + 32 字节独立加盐)** 存储，绝不存留明文。
+- **防暴力破解保护**：恒定时间比对防御时序侧信道攻击；连续输错 5 次密码将自动锁定 5 分钟，拒绝继续尝试。
+- **忘记密码修改命令**：如果忘记密码，可通过专用管理命令随时重置并解除锁定状态：
+  ```bash
+  python run.py change-password
+  # 或指定用户名与新密码重置：
+  python run.py change-password --username admin --new-password YourNewPassword123
+  ```
+- **非交互式/自动化支持**：在定时任务、Docker 或 CI/CD 无人值守环境中，可通过环境变量或命令行进行初始化与鉴权：
+  - 环境变量方式（配置在 `.env` 中）：
+    ```bash
+    APP_AUTH_USERNAME=admin
+    APP_AUTH_PASSWORD=YourSecurePassword123
+    ```
+  - 命令行一键初始化：
+    ```bash
+    python run.py init-auth --username admin --password YourSecurePassword123
+    ```
 ## 🧰 技术栈
 
 | 类别 | 内容 |
