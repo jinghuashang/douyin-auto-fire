@@ -15,7 +15,9 @@ from app.auth import (
     validate_password_complexity,
 )
 from app.config import ConfigError
+from app.interrupt import ExecutionInterruptedError, ExecutionTimeoutError, signal_interrupt_handler
 from app.main import main as run_single
+
 
 
 def _handle_change_password(args: argparse.Namespace) -> int:
@@ -96,9 +98,11 @@ def build_parser() -> argparse.ArgumentParser:
     init_auth_parser.add_argument("--auth-file", help="指定 auth.json 凭证文件路径")
 
     # 发送任务相关参数（兼容直接透传）
-    parser.add_argument("--dry-run", action="store_true", help="只验证登录和好友，不发送消息")
+    parser.add_argument("--dry-run", action="store_true", help="只验证登录和好友，不发送消息（测试模式）")
     parser.add_argument("--env-file", help="指定 .env 文件路径")
     parser.add_argument("--auth-file", help="指定 auth.json 凭证文件路径")
+    parser.add_argument("--timeout", type=float, default=None, help="最大执行超时秒数，超时后自动中断并退出")
+    parser.add_argument("--fail-fast", action="store_true", help="遇到首个目标失败或配置错误时立即中断退出")
     return parser
 
 
@@ -125,19 +129,21 @@ def main(argv: list[str] | None = None) -> int:
         return 130
 
     try:
-        accounts = load_accounts()
+        with signal_interrupt_handler():
+            accounts = load_accounts()
+            if accounts is None:
+                # 没有 config/accounts.json：单账号模式
+                return run_single()
+            return run_all_accounts()
     except ConfigError as exc:
         print(f"错误: {exc}", file=sys.stderr)
         return 2
-    if accounts is None:
-        # 没有 config/accounts.json：旧单账号模式，行为不变。
-        return run_single()
-    try:
-        return run_all_accounts()
-    except KeyboardInterrupt:
-        print("任务已取消")
+    except ExecutionTimeoutError as exc:
+        print(f"执行超时中断: {exc}", file=sys.stderr)
+        return 124
+    except (KeyboardInterrupt, ExecutionInterruptedError):
+        print("\n任务已由用户或系统中断取消")
         return 130
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

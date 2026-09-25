@@ -104,6 +104,25 @@ docker compose up -d
     ```bash
     python run.py init-auth --username admin --password YourSecurePassword123
     ```
+
+## 🛑 任务中断与超时保护 (防配置错误卡死)
+
+针对配置错误（例如好友名称不存在、选择器失效、网络波动）可能导致的无限等待或重复重试，系统提供了完善的中断与超时保护机制：
+
+- **超时自动中断 (`--timeout`)**：支持为测试（`--dry-run`）与真实发送设置全局最大执行时间，超时后优雅打断、释放浏览器并退出（返回状态码 124）：
+  ```bash
+  # 测试模式限时 30 秒，超时自动中断
+  python run.py --dry-run --timeout 30
+
+  # 真实执行限时 60 秒
+  python run.py --timeout 60
+  ```
+  *(也可通过环境变量 `TASK_TIMEOUT=60` 或在 `config.json` 中配置 `"timeout_seconds": 60` 生效)*
+- **遇到错误立即中断 (`--fail-fast`)**：开启后若遇到首个目标失败或配置异常，立即中断后续好友的处理，方便快速排查配置问题：
+  ```bash
+  python run.py --dry-run --fail-fast
+  ```
+- **安全信号中断 (Ctrl+C)**：随时可通过键盘 `Ctrl+C` 或 SIGINT/SIGTERM 中断任务，系统将安全关闭浏览器会话、释放 `run.lock` 文件锁，并在多账号模式下立即停止后续所有账号的执行（返回状态码 130）。
 ## 🧰 技术栈
 
 | 类别 | 内容 |
